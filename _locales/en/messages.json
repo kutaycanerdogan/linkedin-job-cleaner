@@ -1,0 +1,23 @@
+{
+  "extensionName": {
+    "message": "LinkedIn Job Cleaner"
+  },
+  "extensionDescription": {
+    "message": "Hides applied, viewed, and promoted job postings."
+  },
+  "filterTitle": {
+    "message": "Job Filters"
+  },
+  "applied": {
+    "message": "Applied Jobs"
+  },
+  "viewed": {
+    "message": "Viewed Jobs"
+  },
+  "promoted": {
+    "message": "Promoted / Sponsored"
+  },
+  "footer": {
+    "message": "Changes applied instantly."
+  }
+}

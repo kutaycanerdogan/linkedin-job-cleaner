@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="tr">
+	<head>
+		<meta charset="UTF-8" />
+		<style>
+			body {
+				width: 220px;
+				padding: 15px;
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background-color: #f3f2ef;
+				margin: 0;
+			}
+			h3 {
+				font-size: 16px;
+				margin: 0 0 15px 0;
+				color: #004182;
+				border-bottom: 1px solid #ddd;
+				padding-bottom: 5px;
+			}
+			.option {
+				margin-bottom: 12px;
+				display: flex;
+				align-items: center;
+				cursor: pointer;
+			}
+			input[type="checkbox"] {
+				width: 18px;
+				height: 18px;
+				margin-right: 10px;
+				cursor: pointer;
+			}
+			label {
+				font-size: 14px;
+				color: #333;
+				cursor: pointer;
+				user-select: none;
+			}
+			.footer {
+				margin-top: 15px;
+				font-size: 10px;
+				color: #666;
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<h3 data-i18n="filterTitle"></h3>
+		<div class="option">
+			<input type="checkbox" id="hideApplied" />
+			<label for="hideApplied" data-i18n="applied"></label>
+		</div>
+		<div class="option">
+			<input type="checkbox" id="hideViewed" />
+			<label for="hideViewed" data-i18n="viewed"></label>
+		</div>
+		<div class="option">
+			<input type="checkbox" id="hidePromoted" />
+			<label for="hidePromoted" data-i18n="promoted"></label>
+		</div>
+		<div class="footer" data-i18n="footer"></div>
+		<script src="popup.js"></script>
+	</body>
+</html>

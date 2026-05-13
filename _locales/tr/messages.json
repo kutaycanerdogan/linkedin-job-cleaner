@@ -1,0 +1,23 @@
+{
+  "extensionName": {
+    "message": "LinkedIn İlan Temizleyici"
+  },
+  "extensionDescription": {
+    "message": "Başvurulan, görüntülenen ve sponsorlu ilanları gizler."
+  },
+  "filterTitle": {
+    "message": "İlan Filtreleri"
+  },
+  "applied": {
+    "message": "Başvurulan İlanlar"
+  },
+  "viewed": {
+    "message": "Görüntülenen İlanlar"
+  },
+  "promoted": {
+    "message": "Sponsorlu / Tanıtım"
+  },
+  "footer": {
+    "message": "Değişiklikler anında uygulanır."
+  }
+}
