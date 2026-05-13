@@ -19,5 +19,11 @@
   },
   "footer": {
     "message": "Değişiklikler anında uygulanır."
+  },
+  "blacklistLabel": {
+    "message": "Yasaklı Kelimeler (Virgülle ayır)"
+  },
+  "saveBtn": {
+    "message": "Listeyi Güncelle"
   }
 }

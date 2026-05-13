@@ -1,111 +1,130 @@
-const getLinkedInLanguage = () => {
-	const lang = document.documentElement.lang || "en";
-	return lang.split("-")[0];
+/**
+ * LinkedIn Jobs - Performance Optimized Content Script
+ */
+
+let userPrefs = {};
+const dictionary = {
+	tr: {
+		applied: ["başvuruldu", "başvuru yapıldı", "başvurulanlar"],
+		viewed: ["görüntülendi", "bakıldı", "görüntülenen"],
+		promoted: ["sponsorlu", "tanıtım", "reklam", "tanıtıldı"],
+	},
+	en: {
+		applied: ["applied"],
+		viewed: ["viewed"],
+		promoted: ["promoted", "advertisement", "sponsored"],
+	},
+	fr: {
+		applied: ["candidature envoyée", "postulé"],
+		viewed: ["consultée"],
+		promoted: ["sponsoring", "annonce"],
+	},
 };
 
+const getLinkedInLanguage = () => (document.documentElement.lang || "en").split("-")[0];
+
 const filterJobs = () => {
-	chrome.storage.sync.get(["hideApplied", "hideViewed", "hidePromoted"], (prefs) => {
-		const userLang = getLinkedInLanguage();
-		const jobCards = document.querySelectorAll("li.scaffold-layout__list-item");
+	// Ayarları asenkron al ama yerel objeyi güncelle
+	chrome.storage.sync.get(["hideApplied", "hideViewed", "hidePromoted", "badKeywords"], (prefs) => {
+		if (chrome.runtime.lastError) return;
+		userPrefs = prefs;
 
-		const dictionary = {
-			tr: {
-				applied: ["başvuruldu", "başvuru yapıldı", "başvurulanlar"],
-				viewed: ["görüntülendi", "bakıldı", "görüntülenen"],
-				promoted: ["sponsorlu", "tanıtım", "reklam", "tanıtıldı"],
-			},
-			en: {
-				applied: ["applied"],
-				viewed: ["viewed"],
-				promoted: ["promoted", "advertisement", "sponsored"],
-			},
-			fr: {
-				applied: ["candidature envoyée", "postulé"],
-				viewed: ["consultée"],
-				promoted: ["sponsoring", "annonce"],
-			},
-		};
-
-		const activeDict = dictionary[userLang] || dictionary["en"];
+		const activeDict = dictionary[getLinkedInLanguage()] || dictionary["en"];
+		const jobCards = document.querySelectorAll("li.scaffold-layout__list-item, li[data-occludable-job-id]");
 
 		jobCards.forEach((card) => {
 			const cardText = card.innerText.toLowerCase();
 			let shouldHide = false;
 
-			if (prefs.hideApplied && activeDict.applied.some((k) => cardText.includes(k))) shouldHide = true;
-			if (prefs.hideViewed && !shouldHide && activeDict.viewed.some((k) => cardText.includes(k))) shouldHide = true;
-			if (prefs.hidePromoted && !shouldHide && activeDict.promoted.some((k) => cardText.includes(k))) shouldHide = true;
+			if (userPrefs.hideApplied && activeDict.applied.some((k) => cardText.includes(k))) shouldHide = true;
+			if (userPrefs.hideViewed && !shouldHide && activeDict.viewed.some((k) => cardText.includes(k))) shouldHide = true;
+			if (userPrefs.hidePromoted && !shouldHide && activeDict.promoted.some((k) => cardText.includes(k))) shouldHide = true;
 
-			card.style.setProperty("display", shouldHide ? "none" : "block", "important");
+			const currentDisplay = card.style.display;
+			const targetDisplay = shouldHide ? "none" : "block";
+
+			// Sadece değişim varsa DOM'a dokun (Performans için kritik)
+			if (currentDisplay !== targetDisplay) {
+				card.style.setProperty("display", targetDisplay, "important");
+			}
 		});
+
+		const detailContainer = document.querySelector(".jobs-description__container");
+		if (detailContainer && userPrefs.badKeywords && window.highlightSafe) {
+			window.highlightSafe(detailContainer, userPrefs.badKeywords);
+		}
 	});
 };
 
-// Performans için Debounce
 let debounceTimer;
 const debounceFilter = () => {
 	clearTimeout(debounceTimer);
-	debounceTimer = setTimeout(filterJobs, 300);
+	debounceTimer = setTimeout(filterJobs, 150);
 };
 
-// --- YENİ: Dinamik Sayfa Geçişlerini Yöneten Kısım ---
-
-// 1. 'main' Elementini İzleyen Fonksiyon (Daha Garanti Yapı)
 let mainObserver;
 const setupMainObserver = () => {
 	if (mainObserver) mainObserver.disconnect();
 
-	const mainElement = document.getElementById("main");
-	const target = mainElement || document.body;
+	const jobListContainer = document.querySelector(".scaffold-layout__list-container") || document.querySelector(".jobs-search-results-list") || document.body;
 
 	mainObserver = new MutationObserver((mutations) => {
-		// Sadece yeni elementler eklendiğinde kontrol et
 		let shouldTrigger = false;
-
-		for (const mutation of mutations) {
-			// 1. Eğer yeni node'lar eklendiyse
-			if (mutation.addedNodes.length > 0) {
-				// 2. Eklenen node'lar arasında iş kartı (li) var mı bak
-				const hasJobCard = Array.from(mutation.addedNodes).some((node) => node.nodeType === 1 && (node.classList.contains("scaffold-layout__list-item") || node.querySelector(".scaffold-layout__list-item")));
-
-				if (hasJobCard) {
-					shouldTrigger = true;
-					break; // Bir tane bulmamız yeterli
-				}
+		for (let i = 0; i < mutations.length; i++) {
+			const m = mutations[i];
+			// Sadece içerik veya liste değişimi varsa tetikle
+			if (m.addedNodes.length > 0 || m.type === "attributes" || m.type === "characterData") {
+				shouldTrigger = true;
+				break;
 			}
 		}
-
-		// Sadece iş kartı değişikliği gördüğümüzde debounce çalışsın
-		if (shouldTrigger) {
-			debounceFilter();
-		}
+		if (shouldTrigger) debounceFilter();
 	});
 
-	mainObserver.observe(target, {
+	mainObserver.observe(jobListContainer, {
 		childList: true,
 		subtree: true,
+		attributes: true,
+		attributeFilter: ["class", "id"], // Sadece kritik öznitelikleri izle
+		characterData: true,
 	});
 };
 
-// 2. URL Değişimini İzle (Geri/İleri butonu veya menü geçişleri için)
+const initializeExtension = () => {
+	let attempts = 0;
+	const checkAndRun = setInterval(() => {
+		attempts++;
+		const jobCards = document.querySelectorAll("li.scaffold-layout__list-item");
+		if (jobCards.length > 0 || attempts >= 15) {
+			clearInterval(checkAndRun);
+			filterJobs();
+			setupMainObserver();
+		}
+	}, 500);
+};
+
+// URL Takibi (SPA geçişleri için)
 let lastUrl = location.href;
 const urlObserver = new MutationObserver(() => {
 	if (location.href !== lastUrl) {
 		lastUrl = location.href;
-		filterJobs(); // URL değiştiğinde hemen çalıştır
-		setupMainObserver(); // Observer'ı yeni sayfadaki 'main' elementine tekrar bağla
+		setTimeout(() => {
+			filterJobs();
+			setupMainObserver();
+		}, 500);
 	}
 });
 urlObserver.observe(document, { subtree: true, childList: true });
 
-// 3. Sayfa belleğe alındığında (Geri dönüşlerde) çalıştır
+// Event Listeners
+if (document.readyState === "complete" || document.readyState === "interactive") {
+	initializeExtension();
+} else {
+	window.addEventListener("DOMContentLoaded", initializeExtension);
+}
+
 window.addEventListener("pageshow", filterJobs);
 
-// İlk Kurulum
-setupMainObserver();
-filterJobs();
-
-// Popup'tan gelen mesajları dinle
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if (request.action === "refreshFilters") {
 		filterJobs();

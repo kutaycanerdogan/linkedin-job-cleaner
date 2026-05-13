@@ -19,5 +19,7 @@
   },
   "footer": {
     "message": "Changes applied instantly."
-  }
+  },
+  "blacklistLabel": { "message": "Blacklisted Keywords (comma separated)" },
+  "saveBtn": { "message": "Update List" }
 }

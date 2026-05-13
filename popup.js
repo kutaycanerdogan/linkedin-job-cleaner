@@ -35,4 +35,28 @@ document.addEventListener("DOMContentLoaded", () => {
 			});
 		});
 	});
+	// Kaydetme butonuna basıldığında
+	document.getElementById("saveBlacklist").addEventListener("click", () => {
+		const words = document
+			.getElementById("blacklist")
+			.value.split(",")
+			.map((w) => w.trim())
+			.filter((w) => w !== "");
+
+		chrome.storage.sync.set({ badKeywords: words }, () => {
+			// Sayfayı yenilemeye gerek kalmadan content script'e haber ver
+			chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+				if (tabs[0]) {
+					chrome.tabs.sendMessage(tabs[0].id, { action: "refreshFilters" });
+				}
+			});
+		});
+	});
+
+	// Sayfa açıldığında mevcut listeyi yükle
+	chrome.storage.sync.get("badKeywords", (data) => {
+		if (data.badKeywords) {
+			document.getElementById("blacklist").value = data.badKeywords.join(", ");
+		}
+	});
 });

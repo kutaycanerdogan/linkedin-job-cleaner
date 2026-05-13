@@ -22,6 +22,7 @@
         "https://www.linkedin.com/jobs/*"
       ],
       "js": [
+        "job-detail-highlighter.js",
         "content.js"
       ]
     }
